@@ -1,0 +1,45 @@
+version: "1.0"
+
+stages:
+  - "clone"
+  - "prepare"
+  - "terraform"
+
+steps:
+  clone:
+    title: "Clone the Repository"
+    type: "git-clone"
+    repo: "https://github.com/gh-ashussain/terraform_test_repo.git"
+    revision: "main"
+    git: gh-test-git-provider
+    stage: clone
+
+  FetchSecrets:
+    title: "Fetch secrets from AWS SM"
+    type: "aws-secrets-manager"
+    arguments:
+      AWS_DEFAULT_REGION: us-west-2
+      secrets:
+        - secret_arn: 'codefresh'
+          key: github_personal_access_token
+          store_in: GITHUB_PERSONAL_ACCESS_TOKEN
+    stage: prepare
+
+  terraform:
+    image: hashicorp/terraform:1.0.5
+    title: "Terraform Init, Plan"
+    working_directory: ${{clone}}
+    commands:
+        - if [ ! -d "terraform" ]; then exit 0; fi
+        - git config --global url."https://foo:${GITHUB_PERSONAL_ACCESS_TOKEN}@github.com/gh-org-screening".insteadOf "https://github.com/gh-org-screening"
+        - >-
+          cd terraform;
+          terraform init
+          -input=false
+          -backend-config=environments/${TARGET_ENVIRONMENT}/remote-backend.properties
+        - terraform validate
+        - >-
+          terraform plan
+          # -out=${TARGET_ENVIRONMENT}_tfplan
+          -var-file=environments/${TARGET_ENVIRONMENT}/terraform.tfvars
+      stage: terraform
