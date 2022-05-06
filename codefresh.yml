@@ -40,6 +40,5 @@ steps:
         - terraform validate
         - >-
           terraform plan
-          # -out=${TARGET_ENVIRONMENT}_tfplan
           -var-file=environments/${TARGET_ENVIRONMENT}/terraform.tfvars
     stage: terraform
